@@ -7,5 +7,3 @@ msal
 requests
 python-dotenv
 pdf2image
-sqlite3
-
