@@ -631,11 +631,12 @@ with tabs[1]:
                         
 # STEP 3: TEAMS UPLOAD TAB
 with tabs[2]:
-    st.markdown('<div class="step-header">Step 3: Upload to Microsoft Teams</div>', unsafe_allow_html=True)
+    # Clear previous upload results and selections when entering this tab
+    st.session_state.upload_results = []
+    st.session_state.select_all_files = False
+    st.session_state.files_to_upload = []
     
-    # Initialize storage for upload results if not exists
-    if 'upload_results' not in st.session_state:
-        st.session_state.upload_results = []
+    st.markdown('<div class="step-header">Step 3: Upload to Microsoft Teams</div>', unsafe_allow_html=True)
     
     st.markdown("""
     This step uploads the processed e-cheque files to Microsoft Teams in your Finance department.
@@ -652,10 +653,6 @@ with tabs[2]:
     - Finance Team ID: ✓ Configured
     """)
     
-    # Initialize files_to_upload in session state if not exists
-    if 'files_to_upload' not in st.session_state:
-        st.session_state.files_to_upload = []
-    
     # Check if we have files to upload
     if not st.session_state.processed_files:
         st.markdown("""
@@ -664,40 +661,24 @@ with tabs[2]:
         </div>
         """, unsafe_allow_html=True)
     else:
-        # Update files_to_upload with current processed files
-        st.session_state.files_to_upload = st.session_state.processed_files.copy()
-        
         # Upload options
         st.markdown('<div class="subheader">Upload Options</div>', unsafe_allow_html=True)
         
         # Show file count
-        st.markdown(f"**{len(st.session_state.files_to_upload)} files available for upload:**")
-        
-        # Initialize select_all state if not exists
-        if 'select_all_files' not in st.session_state:
-            st.session_state.select_all_files = False
+        st.markdown(f"**{len(st.session_state.processed_files)} files available for upload:**")
         
         # Add select all/none buttons in a row
-        col1, col2, col3 = st.columns([1, 1, 5])
+        col1, col2 = st.columns([1, 6])
         with col1:
             if st.button("Select All"):
                 st.session_state.select_all_files = True
-                st.rerun()
-        with col2:
-            if st.button("Clear Selection"):
-                st.session_state.select_all_files = False
-                st.rerun()
-        with col3:
-            # Add reset button to clear upload results
-            if st.button("Reset Upload Status"):
-                st.session_state.upload_results = []
                 st.rerun()
         
         # Let user select which PDFs to upload        
         selected_files = []
         with st.container():
             # File selection with checkboxes - use select_all state
-            for i, file in enumerate(st.session_state.files_to_upload):
+            for i, file in enumerate(st.session_state.processed_files):
                 if st.checkbox(f"{file['generated_filename']}", value=st.session_state.select_all_files, key=f"pdf_{i}"):
                     selected_files.append(file)
         
@@ -707,7 +688,7 @@ with tabs[2]:
         else:
             st.warning("Please select at least one file to upload")
         
-        # Upload button - show batch status for multiple files
+        # Upload button
         if st.button("📤 Upload to Teams"):
             if not selected_files:
                 st.error("Please select at least one file to upload.")
@@ -728,10 +709,6 @@ with tabs[2]:
                             if progress is not None:
                                 progress_bar.progress(progress)
                         
-                        # If multiple files, show batch progress
-                        if len(selected_files) > 1:
-                            progress_placeholder.info(f"Preparing to upload {len(selected_files)} files in batch...")
-                        
                         # Upload files
                         upload_results, error, _, _ = teams_component.upload_files_to_teams(
                             selected_files,
@@ -741,9 +718,6 @@ with tabs[2]:
                             finance_team_id,
                             progress_callback=progress_callback
                         )
-                        
-                        # Store results in session state
-                        st.session_state.upload_results = upload_results
                         
                         if error:
                             st.error(f"Teams upload failed: {error}")
@@ -775,15 +749,8 @@ with tabs[2]:
                             results_df = pd.DataFrame(results_data)
                             st.dataframe(results_df, use_container_width=True)
                             
-                            # Show confirmation message and next steps
+                            # Add download button for upload report
                             if success_count > 0:
-                                st.markdown("""
-                                <div class="info-box">
-                                <strong>Complete!</strong> The e-cheques have been successfully uploaded to Teams and are now available for the Finance team.
-                                </div>
-                                """, unsafe_allow_html=True)
-                                
-                                # Add download button for upload report
                                 csv_data = results_df.to_csv(index=False)
                                 st.download_button(
                                     label="📊 Download Upload Report as CSV",
@@ -794,25 +761,6 @@ with tabs[2]:
                     
                     except Exception as e:
                         st.error(f"An error occurred during Teams upload: {str(e)}")
-        
-        # Always show upload results section, even if empty
-        st.markdown("---")
-        st.markdown('<div class="subheader">Upload Results</div>', unsafe_allow_html=True)
-        
-        if st.session_state.upload_results:
-            results_data = []
-            for result in st.session_state.upload_results:
-                results_data.append({
-                    "Filename": result['filename'],
-                    "Status": "✅ Success" if result['success'] else "❌ Failed",
-                    "Target Folder": result.get('target_folder', 'Unknown'),
-                    "Error": result.get('error', '') if not result['success'] else ''
-                })
-            
-            results_df = pd.DataFrame(results_data)
-            st.dataframe(results_df, use_container_width=True)
-        else:
-            st.info("No upload results to display yet.")
 
 # Footer with helpful information
 st.markdown("---")
