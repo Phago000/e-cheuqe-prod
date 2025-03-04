@@ -647,6 +647,38 @@ with tabs[2]:
     - Tenant ID: ✓ Configured
     - Finance Team ID: ✓ Configured
     """)
+
+    # Add clear all functionality
+    st.markdown("---")
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        if st.button("🗑️ Clear All Files", type="primary"):
+            # Clear session state
+            if 'downloaded_files' in st.session_state:
+                st.session_state.downloaded_files = []
+            if 'processed_files' in st.session_state:
+                st.session_state.processed_files = []
+            if 'processed_filenames' in st.session_state:
+                st.session_state.processed_filenames = set()
+            if 'upload_results' in st.session_state:
+                del st.session_state.upload_results
+            if 'select_all_files' in st.session_state:
+                st.session_state.select_all_files = False
+            
+            # Clear database
+            try:
+                conn = sqlite3.connect('echeque_processing.db')
+                c = conn.cursor()
+                c.execute("DELETE FROM processed_files")
+                conn.commit()
+                conn.close()
+                st.success("Successfully cleared all files!")
+                time.sleep(1)  # Brief pause to show success message
+                st.rerun()  # Refresh the page
+            except Exception as e:
+                st.error(f"Error clearing database: {str(e)}")
+    with col2:
+        st.info("Click 'Clear All Files' to permanently remove all downloaded and processed files from the system.")
     
     # Check if we have files to upload
     if not st.session_state.processed_files:
@@ -721,7 +753,7 @@ with tabs[2]:
                         # If multiple files, show batch progress
                         if len(selected_files) > 1:
                             progress_placeholder.info(f"Preparing to upload {len(selected_files)} files in batch...")
-                        
+                            
                         # Upload files
                         upload_results, error, _, _ = teams_component.upload_files_to_teams(
                             selected_files,
@@ -731,6 +763,9 @@ with tabs[2]:
                             finance_team_id,
                             progress_callback=progress_callback
                         )
+                        
+                        # Store results in session state for potential reset
+                        st.session_state.upload_results = upload_results
                         
                         if error:
                             st.error(f"Teams upload failed: {error}")
@@ -744,31 +779,8 @@ with tabs[2]:
                                 ✅ Successfully uploaded all {len(upload_results)} files to Teams!
                                 </div>
                                 """, unsafe_allow_html=True)
-                                
-                                # Clear processed files after successful upload
-                                st.session_state.processed_files = []
-                                st.session_state.downloaded_files = []
-                                st.session_state.select_all_files = False
-                                if 'upload_results' in st.session_state:
-                                    del st.session_state.upload_results
-                                
-                                # Show success message and rerun to refresh the page
-                                st.success("Upload complete! Files have been cleared.")
-                                time.sleep(2)  # Give user time to see the message
-                                st.rerun()
                             else:
                                 st.warning(f"Uploaded {success_count} out of {len(upload_results)} files to Teams.")
-                                
-                                # Remove successfully uploaded files from the lists
-                                successful_files = set(result['filename'] for result in upload_results if result['success'])
-                                st.session_state.processed_files = [
-                                    file for file in st.session_state.processed_files 
-                                    if file['generated_filename'] not in successful_files
-                                ]
-                                st.session_state.downloaded_files = [
-                                    file for file in st.session_state.downloaded_files 
-                                    if file['filename'] not in successful_files
-                                ]
                             
                             # Display results
                             st.markdown('<div class="subheader">Upload Results</div>', unsafe_allow_html=True)
@@ -785,17 +797,42 @@ with tabs[2]:
                             results_df = pd.DataFrame(results_data)
                             st.dataframe(results_df, use_container_width=True)
                             
-                            # Add download button for upload report
-                            csv_data = results_df.to_csv(index=False)
-                            st.download_button(
-                                label="📊 Download Upload Report as CSV",
-                                data=csv_data,
-                                file_name=f"teams_upload_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                                mime="text/csv"
-                            )
+                            # Show confirmation message and next steps
+                            if success_count > 0:
+                                st.markdown("""
+                                <div class="info-box">
+                                <strong>Complete!</strong> The e-cheques have been successfully uploaded to Teams and are now available for the Finance team.
+                                </div>
+                                """, unsafe_allow_html=True)
+                                
+                                # Add download button for upload report
+                                csv_data = results_df.to_csv(index=False)
+                                st.download_button(
+                                    label="📊 Download Upload Report as CSV",
+                                    data=csv_data,
+                                    file_name=f"teams_upload_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                    mime="text/csv"
+                                )
                     
                     except Exception as e:
                         st.error(f"An error occurred during Teams upload: {str(e)}")
+        
+        # Show previous upload results if they exist
+        if 'upload_results' in st.session_state and st.session_state.upload_results:
+            st.markdown("---")
+            st.markdown('<div class="subheader">Previous Upload Results</div>', unsafe_allow_html=True)
+            
+            results_data = []
+            for result in st.session_state.upload_results:
+                results_data.append({
+                    "Filename": result['filename'],
+                    "Status": "✅ Success" if result['success'] else "❌ Failed",
+                    "Target Folder": result.get('target_folder', 'Unknown'),
+                    "Error": result.get('error', '') if not result['success'] else ''
+                })
+            
+            results_df = pd.DataFrame(results_data)
+            st.dataframe(results_df, use_container_width=True)
                         
 # Footer with helpful information
 st.markdown("---")
