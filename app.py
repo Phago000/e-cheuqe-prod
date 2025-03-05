@@ -113,11 +113,48 @@ st.markdown("""
     .stTextInput > div > div > input, 
     .stDateInput > div > div > input,
     .stTextArea > div > div > textarea {
-        color: white !important;
-        background-color: #1e2530 !important;
+        color: black !important;  /* Changed from white to black */
+        background-color: #ffffff !important;  /* Changed to white background */
         border: 1px solid #30363d !important;
     }
-    
+
+    /* Date input specific styling */
+    .stDateInput {
+        color: black !important;
+    }
+
+    .stDateInput > div {
+        color: black !important;
+    }
+
+    .stDateInput input[type="date"] {
+        color: black !important;
+        background-color: #ffffff !important;
+    }
+
+    /* Calendar popup styling */
+    .react-datepicker {
+        color: black !important;
+        background-color: #ffffff !important;
+    }
+
+    .react-datepicker__header {
+        background-color: #f0f0f0 !important;
+    }
+
+    .react-datepicker__day {
+        color: black !important;
+    }
+
+    .react-datepicker__day:hover {
+        background-color: #e0e0e0 !important;
+    }
+
+    .react-datepicker__day--selected {
+        background-color: #4285F4 !important;
+        color: white !important;
+    }
+
     /* Make form fields and buttons stand out */
     button, .stButton button, .stDownloadButton button {
         background-color: #4285F4 !important;
