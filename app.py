@@ -24,22 +24,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Apply custom styling for dark theme
+# Apply custom styling
 st.markdown("""
 <style>
-    /* Core styling for dark theme */
+    /* Core styling */
     body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        color: white;
-    }
-    
-    /* Force dark mode */
-    html, body, .main, .css-1d391kg, [data-testid="stAppViewContainer"], 
-    [data-testid="stSidebar"], [data-testid="stHeader"], 
-    [data-testid="stToolbar"], [data-testid="stDecoration"], 
-    [data-testid="baseButton-secondary"], section[data-testid="stSidebar"] {
-        background-color: #0e1117 !important;
-        color: white !important;
     }
     
     /* Headers */
@@ -47,26 +37,18 @@ st.markdown("""
         font-size: 1.8rem;
         font-weight: bold;
         margin-bottom: 1rem;
-        color: white;
     }
     
     .step-header {
         font-size: 1.4rem;
         font-weight: bold;
         margin: 0.8rem 0;
-        color: white;
     }
     
     .subheader {
         font-size: 1.2rem;
         font-weight: bold;
         margin: 0.6rem 0;
-        color: white;
-    }
-    
-    /* Typography */
-    p, h1, h2, h3, h4, h5, h6, span, div, label {
-        color: white !important;
     }
     
     /* Status boxes */
@@ -75,7 +57,6 @@ st.markdown("""
         background-color: rgba(52, 168, 83, 0.2);
         border-left: 4px solid #34A853;
         margin-bottom: 0.8rem;
-        color: white;
     }
     
     .warning-box {
@@ -83,7 +64,6 @@ st.markdown("""
         background-color: rgba(251, 188, 4, 0.2);
         border-left: 4px solid #FBBC04;
         margin-bottom: 0.8rem;
-        color: white;
     }
     
     .info-box {
@@ -91,109 +71,73 @@ st.markdown("""
         background-color: rgba(66, 133, 244, 0.2);
         border-left: 4px solid #4285F4;
         margin-bottom: 0.8rem;
-        color: white;
     }
     
     /* Tab styling */
-    .stTabs [data-baseweb="tab-panel"] {
-        background-color: #0e1117 !important;
-    }
-    
     .stTabs [data-baseweb="tab"] {
-        background-color: #1e2530 !important;
-        color: white !important;
+        background-color: #f0f2f6;
     }
     
     .stTabs [aria-selected="true"] {
-        background-color: #4285F4 !important;
-        color: white !important;
+        background-color: #4285F4;
+        color: white;
     }
     
     /* Input fields */
     .stTextInput > div > div > input, 
     .stDateInput > div > div > input,
     .stTextArea > div > div > textarea {
-        color: black !important;  /* Changed from white to black */
-        background-color: #ffffff !important;  /* Changed to white background */
-        border: 1px solid #30363d !important;
+        background-color: white;
+        border: 1px solid #ccc;
     }
 
     /* Date input specific styling */
     .stDateInput {
-        color: black !important;
+        background-color: white;
     }
 
     .stDateInput > div {
-        color: black !important;
+        background-color: white;
     }
 
     .stDateInput input[type="date"] {
-        color: black !important;
-        background-color: #ffffff !important;
-    }
-
-    /* Calendar popup styling */
-    .react-datepicker {
-        color: black !important;
-        background-color: #ffffff !important;
-    }
-
-    .react-datepicker__header {
-        background-color: #f0f0f0 !important;
-    }
-
-    .react-datepicker__day {
-        color: black !important;
-    }
-
-    .react-datepicker__day:hover {
-        background-color: #e0e0e0 !important;
-    }
-
-    .react-datepicker__day--selected {
-        background-color: #4285F4 !important;
-        color: white !important;
+        background-color: white;
     }
 
     /* Make form fields and buttons stand out */
     button, .stButton button, .stDownloadButton button {
-        background-color: #4285F4 !important;
-        color: white !important;
-    }
-    
-    /* Dataframe styling */
-    .dataframe {
-        color: white !important;
+        background-color: #4285F4;
+        color: white;
     }
     
     /* Status alerts */
     .stAlert > div {
-        background-color: #1e2530 !important;
-        color: white !important;
+        background-color: #f8f9fa;
     }
     
     .stInfo > div {
-        color: #8ab4f8 !important;
-        background-color: rgba(66, 133, 244, 0.2) !important;
-        border-left-color: #4285F4 !important;
+        background-color: rgba(66, 133, 244, 0.1);
+        border-left-color: #4285F4;
     }
     
     .stSuccess > div {
-        color: #81c995 !important;
-        background-color: rgba(52, 168, 83, 0.2) !important;
-        border-left-color: #34A853 !important;
+        background-color: rgba(52, 168, 83, 0.1);
+        border-left-color: #34A853;
     }
     
     .stWarning > div {
-        color: #fdd663 !important;
-        background-color: rgba(251, 188, 4, 0.2) !important;
-        border-left-color: #FBBC04 !important;
+        background-color: rgba(251, 188, 4, 0.1);
+        border-left-color: #FBBC04;
     }
     
     .stError > div {
-        color: #f28b82 !important;
-        background-color: rgba(234, 67, 53, 0.2) !important;
-        border-left-color: #EA4335 !important;
+        background-color: rgba(234, 67, 53, 0.1);
+        border-left-color: #EA4335;
+    }
+
+    /* Calendar styling */
+    .streamlit-expanderContent {
+        background-color: white;
     }
 </style>
 """, unsafe_allow_html=True)
