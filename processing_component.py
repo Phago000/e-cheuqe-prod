@@ -9,10 +9,18 @@ from datetime import datetime
 import pandas as pd
 import csv
 import google.generativeai as genai
+import time
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # Constants
 MAPPING_FILE = "payee_mappings.csv"
 MAPPING_COLUMNS = ['Full Name', 'Short Form']
+MAX_RETRIES = 5
+INITIAL_WAIT = 1  # seconds
+MAX_WAIT = 32  # seconds
+
+class APIRateLimitError(Exception):
+    pass
 
 def generate_prompt(override_prompt: str = "") -> str:
     if override_prompt:
@@ -114,6 +122,26 @@ def pdf_to_image(pdf_bytes):
     except Exception as e:
         return None, f"Error converting PDF to image: {str(e)}"
 
+def is_rate_limit_error(exception):
+    return isinstance(exception, APIRateLimitError) or (
+        isinstance(exception, Exception) and 
+        "429" in str(exception)
+    )
+
+@retry(
+    retry=retry_if_exception_type(APIRateLimitError),
+    wait=wait_exponential(multiplier=INITIAL_WAIT, max=MAX_WAIT),
+    stop=stop_after_attempt(MAX_RETRIES)
+)
+def call_gemini_api_with_retry(model, prompt_parts):
+    try:
+        response = model.generate_content(prompt_parts)
+        return response.text.strip()
+    except Exception as e:
+        if "429" in str(e):
+            raise APIRateLimitError(f"Rate limit exceeded: {str(e)}")
+        raise e
+
 def call_gemini_api(image_bytes, prompt, api_key):
     """Call Gemini Vision API to analyze e-cheque"""
     if not api_key:
@@ -126,8 +154,10 @@ def call_gemini_api(image_bytes, prompt, api_key):
         image_parts = [{"mime_type": "image/png", "data": base64.b64encode(image_bytes).decode("utf-8")}]
         prompt_parts = [prompt, image_parts[0]]
         
-        response = model.generate_content(prompt_parts)
-        return response.text.strip(), None
+        response_text = call_gemini_api_with_retry(model, prompt_parts)
+        return response_text, None
+    except APIRateLimitError as e:
+        return None, f"Rate limit error after {MAX_RETRIES} retries: {str(e)}"
     except Exception as e:
         return None, f"Error calling Gemini API: {str(e)}"
 
