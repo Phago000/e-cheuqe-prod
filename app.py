@@ -520,6 +520,25 @@ with tabs[1]:
             st.markdown(f"**{len(files_to_process)} files ready for processing:**")
             for name in file_names:
                 st.markdown(f"- {name}")
+
+            # NEW SECTION #1: Download button for previously processed files
+            if st.session_state.processed_files:
+                st.markdown("---")
+                st.markdown('<div class="subheader">Download Previously Processed Files</div>', unsafe_allow_html=True)
+                
+                zip_files = []
+                for processed_file in st.session_state.processed_files:
+                    zip_files.append({
+                        'filename': processed_file['generated_filename'],
+                        'content': processed_file['pdf_data']
+                    })
+                
+                st.download_button(
+                    label="📥 Download All Processed Files as ZIP",
+                    data=create_zip_from_files(zip_files),
+                    file_name=f"all_processed_echeques_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
+                    mime="application/zip"
+                )
     
         # Get Gemini API key from config but don't display an input field
         gemini_api_key = config.get('gemini', {}).get('api_key', '')
@@ -587,6 +606,21 @@ with tabs[1]:
                             
                             results_df = pd.DataFrame(results_data)
                             st.dataframe(results_df, use_container_width=True)
+
+                            # NEW SECTION #2: Download button for newly processed files
+                            zip_files = []
+                            for processed_file in processed_files:
+                                zip_files.append({
+                                    'filename': processed_file['generated_filename'],
+                                    'content': processed_file['pdf_data']
+                                })
+                            
+                            st.download_button(
+                                label="📥 Download Newly Processed Files as ZIP",
+                                data=create_zip_from_files(zip_files),
+                                file_name=f"processed_echeques_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
+                                mime="application/zip"
+                            )
                             
                             # Next step guidance
                             st.markdown("""
