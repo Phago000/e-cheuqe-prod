@@ -131,11 +131,14 @@ def is_rate_limit_error(exception):
 @retry(
     retry=retry_if_exception_type(APIRateLimitError),
     wait=wait_exponential(multiplier=INITIAL_WAIT, max=MAX_WAIT),
-    stop=stop_after_attempt(MAX_RETRIES)
+    stop=stop_after_attempt(MAX_RETRIES),
+    reraise=True
 )
 def call_gemini_api_with_retry(model, prompt_parts):
     try:
         response = model.generate_content(prompt_parts)
+        if not response:
+            raise APIRateLimitError("Empty response from API")
         return response.text.strip()
     except Exception as e:
         if "429" in str(e):
@@ -149,17 +152,28 @@ def call_gemini_api(image_bytes, prompt, api_key):
 
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.0-flash', generation_config=genai.GenerationConfig(temperature=0.0))
+        model = genai.GenerativeModel('gemini-2.0-flash', 
+                                    generation_config=genai.GenerationConfig(temperature=0.0))
 
-        image_parts = [{"mime_type": "image/png", "data": base64.b64encode(image_bytes).decode("utf-8")}]
+        image_parts = [{"mime_type": "image/png", 
+                       "data": base64.b64encode(image_bytes).decode("utf-8")}]
         prompt_parts = [prompt, image_parts[0]]
         
-        response_text = call_gemini_api_with_retry(model, prompt_parts)
-        return response_text, None
-    except APIRateLimitError as e:
-        return None, f"Rate limit error after {MAX_RETRIES} retries: {str(e)}"
+        # Add delay between requests
+        time.sleep(1)  # Add 1 second delay between requests
+        
+        try:
+            response_text = call_gemini_api_with_retry(model, prompt_parts)
+            return response_text, None
+        except APIRateLimitError as e:
+            return None, (f"Rate limit error after {MAX_RETRIES} retries. "
+                        f"Last error: {str(e)}. "
+                        f"Please wait a few minutes before trying again.")
+        except Exception as e:
+            return None, f"Unexpected error during API call: {str(e)}"
+            
     except Exception as e:
-        return None, f"Error calling Gemini API: {str(e)}"
+        return None, f"Error in API configuration: {str(e)}"
 
 def sanitize_filename(filename):
     """Remove invalid characters from filename"""
@@ -280,24 +294,35 @@ def process_echeques(downloaded_files, gemini_api_key, progress_callback=None):
     
     total_files = len(downloaded_files)
     for i, file_info in enumerate(downloaded_files):
-        if progress_callback:
-            progress_callback(f"Processing file {i+1}/{total_files}: {file_info['filename']}")
-        
-        # Process each file
-        result, error = process_echeque(file_info['content'], gemini_api_key, mappings_df)
-        
-        if error:
+        try:
+            if progress_callback:
+                progress_callback(f"Processing file {i+1}/{total_files}: {file_info['filename']}")
+            
+            # Add delay between files
+            if i > 0:
+                time.sleep(2)  # Add 2 second delay between files
+            
+            # Process each file
+            result, error = process_echeque(file_info['content'], gemini_api_key, mappings_df)
+            
+            if error:
+                errors.append({
+                    'filename': file_info['filename'],
+                    'error': error
+                })
+                continue
+            
+            # Add original file info to result
+            result['original_filename'] = file_info['filename']
+            result['email_subject'] = file_info.get('email_subject', 'Unknown')
+            result['email_date'] = file_info.get('email_date', 'Unknown')
+            
+            processed_files.append(result)
+            
+        except Exception as e:
             errors.append({
                 'filename': file_info['filename'],
-                'error': error
+                'error': f"Unexpected error: {str(e)}"
             })
-            continue
-        
-        # Add original file info to result
-        result['original_filename'] = file_info['filename']
-        result['email_subject'] = file_info.get('email_subject', 'Unknown')
-        result['email_date'] = file_info.get('email_date', 'Unknown')
-        
-        processed_files.append(result)
-    
+            
     return processed_files, errors
